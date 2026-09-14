@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>剑道三本胜负 · 水墨决 v4.2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Kaiti SC","STKaiti","KaiTi","华文楷体","楷体","PingFang SC",serif;
+    background: radial-gradient(ellipse at 50% -20%, #fbf7ec 0%, #f2ecdc 100%);
+    color: #3a3326; display: flex; justify-content: center;
+  }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse at 78% 6%, rgba(60,50,30,.05) 0%, transparent 45%),
+      radial-gradient(ellipse at 10% 90%, rgba(60,50,30,.06) 0%, transparent 50%); }
+  .wrapper { position:relative; height:100dvh; max-width:440px; margin:0 auto; width:100%; z-index:1; }
+  .app { width:100%; height:100dvh; display:flex; flex-direction:column; padding:12px 15px 12px; overflow:hidden; }
+
+  header { text-align:center; flex-shrink:0; position:relative; padding-bottom:8px; }
+  header::after { content:""; position:absolute; left:6%; right:6%; bottom:0; height:1px;
+    background:linear-gradient(90deg, transparent, #8a7a55, transparent); }
+  h1 { font-size:22px; letter-spacing:9px; color:#3a3326; font-weight:normal; text-shadow:0 1px 0 rgba(255,255,255,.6); animation:dropIn .5s ease; }
+  .sub { font-size:11px; color:#7a6c52; margin-top:3px; letter-spacing:1px; }
+
+  .scores { display:flex; justify-content:space-around; align-items:center; margin:8px 0 4px; flex-shrink:0; position:relative; }
+  .side { text-align:center; }
+  .side .name { font-size:13px; letter-spacing:3px; color:#5a4e38; }
+  .side .marks { font-size:22px; color:#9c2b22; line-height:1.2; min-height:28px; letter-spacing:3px; }
+  .side.you .marks { color:#9c2b22; }
+  .vs { font-size:14px; color:#7a6c52; letter-spacing:3px; font-style:italic; }
+  .streak { position:absolute; left:50%; transform:translateX(-50%); bottom:-6px; font-size:12px; color:#9c2b22; letter-spacing:2px; min-height:16px; }
+
+  .steps { display:flex; justify-content:space-between; flex-shrink:0; margin-bottom:8px;
+    background:#efe8d6; border-radius:10px; padding:6px 8px; border:1px solid #ddd3ba; }
+  .step { flex:1; text-align:center; font-size:12px; letter-spacing:2px; color:#9c9278;
+    border-bottom:2px solid transparent; padding-bottom:4px; transition:all .3s; }
+  .step.on { color:#9c2b22; border-color:#9c2b22; font-weight:bold; }
+  .step.done { color:#6d6045; border-color:#c9bd9c; }
+
+  .phase { text-align:center; font-size:14px; letter-spacing:2px; color:#5a4e38; margin-bottom:4px;
+    min-height:24px; flex-shrink:0; }
+  .phase.flash { animation:popIn .4s ease; }
+  .bufBar { text-align:center; font-size:11px; color:#8a7654; letter-spacing:1px; margin-bottom:4px; min-height:15px; flex-shrink:0; }
+
+  /* 对手明牌面板 */
+  .aiHandPanel { flex-shrink:0; display:flex; gap:5px; justify-content:center; align-items:flex-start; margin-bottom:5px; min-height:52px; }
+  .aiHandLabel { font-size:10px; color:#8a7654; letter-spacing:1px; margin-bottom:2px; flex-shrink:0; text-align:center; }
+  .aiMini { width:33px; height:44px; background:#faf5e7; border:1px solid #d6c9a8; border-radius:6px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:16px; color:#3a3326; animation:popIn .35s ease; }
+  .aiMini small { font-size:8px; color:#8a7654; line-height:1; margin-top:1px; }
+
+  .arena { background:#fcf8ee; border:1px solid #d8ccae; border-radius:12px;
+    padding:9px 12px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; position:relative;
+    box-shadow: inset 0 0 18px rgba(120,100,60,.05); }
+  .arena::before { content:""; position:absolute; inset:5px; border:1px solid #e6ddc4; border-radius:8px; pointer-events:none; }
+  .arenaHead { display:flex; justify-content:center; gap:44px; font-size:10px; color:#8a7a55; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .row .tag { font-size:9.5px; color:#6d6045; min-width:28px; max-width:54px; flex-shrink:0; text-align:center; letter-spacing:0; line-height:1.15; word-break:break-all; }
+  .pair { flex:1; display:flex; gap:6px; align-items:center; }
+  .slot { flex:1; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:26px; color:#6d6045; position:relative; }
+  .slot.blank { border:1px dashed #cfc3a4; background:#f6f0df; }
+  .slot.light { background:#fdfaf2; border:1px solid #cfc3a4; color:#3a3326;
+    box-shadow: 0 1px 3px rgba(80,60,30,.08); }
+  .slot.pop { animation:popIn .32s ease; }
+  .slot .tt { display:flex; flex-direction:column; align-items:center; line-height:1.1; }
+  .slot small { font-size:9px; color:#8a7654; letter-spacing:1px; }
+
+  .result { text-align:center; font-size:16px; letter-spacing:2px; min-height:44px; color:#3a3326;
+    margin-top:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; line-height:1.5; }
+  .result small { font-size:11px; color:#8a7654; letter-spacing:1px; }
+  .result.win { color:#9c2b22; font-weight:bold; }
+  .result.lose { color:#3d5a7a; font-weight:bold; }
+  .result.tie { color:#6d6045; }
+
+  .hand { flex:1; min-height:0; display:flex; flex-direction:column; margin-top:8px; }
+  .hand .title { font-size:11px; color:#7a6c52; margin-bottom:6px; letter-spacing:1px; text-align:center; flex-shrink:0; }
+  .cards { flex:1; min-height:0; overflow-y:auto;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:8px; align-content:start; padding:10px 2px 2px; }
+  .card { background:#fdfaf1; border:1px solid #d6c9a8; border-radius:10px; padding:6px 2px;
+    text-align:center; cursor:pointer; position:relative; transition:all .16s ease;
+    box-shadow: 0 1px 2px rgba(80,60,30,.06); z-index:1; }
+  .card:hover { transform:translateY(-1px) scale(1.03); box-shadow:0 4px 10px rgba(80,60,30,.14); }
+  .card.sel-seme { border-color:#b98a2e; box-shadow:0 0 0 2px #b98a2e, 0 4px 16px rgba(185,138,46,.38);
+    transform:scale(1.05); background:#fbf3df; z-index:2; }
+  .card.sel-blade { border-color:#3d6a8f; box-shadow:0 0 0 2px #3d6a8f, 0 4px 16px rgba(61,106,143,.32);
+    transform:scale(1.05); background:#eaf1f6; z-index:2; }
+  .card.sel-zanshin { border-color:#c22b22; box-shadow:0 0 0 2px #c22b22, 0 4px 18px rgba(194,43,34,.5);
+    transform:scale(1.06); background:#fbe9e4; z-index:2; }
+  .card.sel-prev { border-color:#b98a2e; box-shadow:0 0 0 2px #b98a2e, 0 3px 14px rgba(185,138,46,.4);
+    transform:scale(1.04); background:#fbf3df; z-index:2; }
+  .card .em { font-size:22px; display:block; color:#3a3326; }
+  .card .nm { font-size:12px; margin-top:3px; letter-spacing:1px; white-space:nowrap; }
+  .card .pt { font-size:10px; color:#8a7654; }
+  .card .cls { position:absolute; top:3px; right:4px; font-size:9px; color:#a4967a; }
+  .card.uchi .cls{color:#9c2b22;} .card.shiki .cls{color:#2f6d4f;}
+  .card.oji .cls{color:#3d5a7a;} .card.kokoro .cls{color:#7a4a8f;}
+  .card.disabled { opacity:.28; cursor:default; transform:none !important; box-shadow:none !important; }
+
+  .actions { flex-shrink:0; display:flex; gap:12px; justify-content:center; margin-top:11px; }
+  button { font-size:15px; letter-spacing:4px; padding:10px 26px; border-radius:10px;
+    border:1px solid #6d6045; background:#f7f0dd; color:#4a3f2c; cursor:pointer; font-family:inherit; }
+  button:hover { background:#efe4c8; }
+  button:disabled { opacity:.35; cursor:default; }
+  .btn-dark { border-color:#9c2b22; background:#9c2b22; color:#f4eee0; }
+  .btn-gray { border-color:#c9bd9c; background:#efe9d8; color:#7a6c52; }
+
+  .notice { flex-shrink:0; margin-top:9px; font-size:10px; color:#9c9278; text-align:center; line-height:1.7; }
+
+  /* 封面/说明 overlay */
+  .intro { position:absolute; inset:0; background:rgba(240,233,214,.94); z-index:20; display:flex;
+    align-items:center; justify-content:center; padding:20px; border-radius:12px; }
+  .intro.hidden { display:none; }
+  .introBox { width:100%; max-width:360px; text-align:center; }
+  .introBox .logo { font-size:30px; letter-spacing:10px; color:#3a3326; margin-bottom:2px; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+  .introBox .logoSub { font-size:12px; color:#7a6c52; letter-spacing:3px; margin-bottom:14px; }
+  .introBody { text-align:left; background:#fcf8ee; border:1px solid #d8ccae; border-radius:12px; padding:14px 16px; margin-bottom:16px; font-size:13px; line-height:1.9; color:#4a3f2c; }
+  .introBody b { color:#9c2b22; letter-spacing:1px; }
+  .introBody p { margin-bottom:4px; }
+  .introBox .btnRow { display:flex; gap:12px; justify-content:center; }
+  .introBox button { flex:1; font-size:15px; letter-spacing:4px; padding:12px 10px; }
+  .modeSel { margin-bottom:16px; }
+  .modeTitle { font-size:12px; color:#7a6c52; letter-spacing:2px; margin-bottom:7px; }
+  .modeOpts { display:flex; gap:10px; justify-content:center; }
+  .modeOpt { flex:1; font-size:14px; letter-spacing:3px; padding:9px 0; border:1px solid #6d6045;
+    border-radius:10px; background:#f7f0dd; color:#4a3f2c; cursor:pointer; text-align:center; line-height:1.4; }
+  .modeOpt small { display:block; font-size:9px; letter-spacing:1px; color:#8a7654; margin-top:1px; }
+  .modeOpt.on { background:#9c2b22; color:#f4eee0; border-color:#9c2b22; }
+  .modeOpt.on small { color:#e8d9c0; }
+  .modeOpts.col3 { gap:6px; }
+  .podium { position:absolute; inset:0; background:rgba(240,233,214,.92); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; border-radius:12px; z-index:18; }
+  .podium.hidden { display:none; }
+  .podium .medal { font-size:56px; margin-bottom:6px; animation:dropIn .5s ease; }
+  .podium .pTitle { font-size:32px; letter-spacing:12px; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .podium.champ .pTitle { color:#b8860b; }
+  .podium.silver .pTitle { color:#8a939b; }
+  .podium.bronze .pTitle { color:#a9712f; }
+  .podium.out .pTitle { color:#6d6045; }
+  .podium .pSub { font-size:14px; color:#6d6045; letter-spacing:3px; margin-bottom:6px; }
+  .podium .pLine { font-size:12px; color:#8a7654; letter-spacing:1px; margin-bottom:20px; }
+  .podium button { font-size:15px; letter-spacing:4px; padding:11px 30px; border-radius:10px;
+    border:1px solid #6d6045; background:#f7f0dd; color:#4a3f2c; cursor:pointer; font-family:inherit; }
+  .podium button:hover { background:#efe4c8; }
+  .modeBar { text-align:center; font-size:12px; color:#9c2b22; letter-spacing:2px; margin-bottom:4px;
+    min-height:15px; flex-shrink:0; }
+  .modeBar.hidden { display:none; }
+  .matchBanner { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; z-index:16; background:rgba(240,233,214,.86); pointer-events:none;
+    animation:mbIn .35s ease; }
+  .matchBanner .mbPos { font-size:40px; letter-spacing:10px; color:#9c2b22; }
+  .matchBanner .mbSub { font-size:14px; color:#6d6045; letter-spacing:3px; margin-top:8px; }
+  .matchBanner.out { opacity:0; transition:opacity .4s; }
+  @keyframes mbIn { from{opacity:0; transform:scale(1.12);} to{opacity:1; transform:scale(1);} }
+
+  .helpBtn { position:absolute; right:2px; top:2px; font-size:11px; letter-spacing:2px; padding:3px 11px;
+    border-radius:8px; border:1px solid #6d6045; background:#f7f0dd; color:#4a3f2c; cursor:pointer; font-family:inherit; }
+  .helpBtn:hover { background:#efe4c8; }
+  .help { position:absolute; inset:0; background:rgba(240,233,214,.92); z-index:25; display:flex;
+    align-items:center; justify-content:center; padding:16px; border-radius:12px; }
+  .help.hidden { display:none; }
+  .helpBox { width:100%; max-width:360px; background:#fcf8ee; border:1px solid #d8ccae; border-radius:14px;
+    padding:16px; position:relative; max-height:90%; overflow-y:auto; box-shadow:0 8px 30px rgba(60,45,20,.2); }
+  .helpHead { text-align:center; font-size:18px; letter-spacing:4px; color:#3a3326; margin-bottom:12px; }
+  .helpClose { position:absolute; top:6px; right:10px; font-size:20px; padding:2px 8px; border:none;
+    background:transparent; color:#8a7654; cursor:pointer; }
+  .helpBody { font-size:13px; line-height:1.8; color:#4a3f2c; }
+  .helpBody h4 { color:#9c2b22; font-size:14px; letter-spacing:2px; margin-top:13px; margin-bottom:4px; }
+  .helpBody p { margin-bottom:3px; }
+  .counterTable { width:100%; border-collapse:collapse; margin:6px 0; font-size:13px; }
+  .counterTable th, .counterTable td { border:1px solid #cbbd99; padding:5px 8px; text-align:center; }
+  .counterTable th { background:#efe5cc; color:#6d5a3a; letter-spacing:1px; }
+  .helpFoot { text-align:center; margin-top:14px; }
+  .finale { position:absolute; inset:0; background:rgba(240,233,214,.9); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; border-radius:12px; z-index:15; }
+  .finale.hidden{ display:none; }
+  .finale .big { font-size:30px; letter-spacing:10px; color:#9c2b22; margin-bottom:20px; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+
+  /* 漫画化特效 */
+  .manga-word { position:fixed; z-index:14; font-size:38px; font-weight:bold; color:#9c2b22;
+    letter-spacing:4px; pointer-events:none; white-space:nowrap;
+    text-shadow:0 2px 0 rgba(255,255,255,.7), 2px 0 0 rgba(156,43,34,.35);
+    animation:mangaPop .35s cubic-bezier(.2,1.6,.4,1) both, mangaFade .45s ease .5s both; }
+  .manga-word.lose { color:#3d5a7a; text-shadow:0 2px 0 rgba(255,255,255,.7), 2px 0 0 rgba(61,90,122,.35); }
+  .speedline { position:fixed; z-index:13; height:2px; pointer-events:none; border-radius:2px;
+    background:linear-gradient(90deg, transparent, #6d6045 50%, transparent);
+    animation:lineSweep .45s ease both; }
+  @keyframes mangaPop { from{opacity:0; transform:translateX(-50%) scale(2.2) rotate(var(--ang,0deg));} to{opacity:1; transform:translateX(-50%) scale(1) rotate(var(--ang,0deg));} }
+  @keyframes mangaFade { to{opacity:0; transform:translateX(-50%) translateY(-18px) rotate(var(--ang,0deg));} }
+  @keyframes lineSweep { from{transform:scaleX(0); opacity:1;} to{transform:scaleX(1); opacity:0;} }
+  @keyframes popIn { from{transform:scale(.5); opacity:0;} to{transform:scale(1); opacity:1;} }
+  @keyframes dropIn { from{transform:translateY(-14px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="app">
+    <header>
+      <h1 id="h1">剑 道 三 本</h1>
+      <div class="sub" id="sub">水墨对决 · 明牌谋算 · 先取二本胜</div>
+      <button class="helpBtn" onclick="showHelp()">说明</button>
+    </header>
+
+    <div class="scores">
+      <div class="side you"><div class="name">你</div><div class="marks" id="youMarks">○○○</div></div>
+      <div class="vs">VS</div>
+      <div class="side"><div class="name" id="aiName">对手</div><div class="marks" id="aiMarks">○○○</div></div>
+    </div>
+    <div class="streak" id="streak"></div>
+
+    <div class="steps">
+      <div class="step" id="st0">对峙</div>
+      <div class="step" id="st1">攻め</div>
+      <div class="step" id="st2">出剑</div>
+      <div class="step" id="st3">残心</div>
+    </div>
+
+    <div class="modeBar hidden" id="modeBar"></div>
+    <div class="phase" id="phase">对峙 · 抽牌蓄势</div>
+    <div class="bufBar" id="bufBar"></div>
+
+    <div class="aiHandLabel">对手手牌 · 明</div>
+    <div class="aiHandPanel" id="aiHandPanel"></div>
+
+    <div class="arena" id="arena">
+      <div class="arenaHead"><span>攻め · 明</span><span>出剑 · 暗</span></div>
+      <div class="row"><div class="tag" id="aiTag">对手</div>
+        <div class="pair">
+          <div class="slot blank" id="aiSeme">？</div>
+          <div class="slot blank" id="aiBlade">・</div>
+        </div>
+      </div>
+      <div class="row"><div class="tag">我方</div>
+        <div class="pair">
+          <div class="slot blank" id="mySeme">—</div>
+          <div class="slot blank" id="myBlade">・</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result" id="result"><small>对峙中 · 看双方手牌</small></div>
+
+    <div class="hand">
+      <div class="title" id="handTitle">你的手牌</div>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="actions">
+      <button id="btnMain" onclick="btnMainClick()">出 阵</button>
+      <button id="btnSkip" class="btn-gray" onclick="btnSkipClick()" style="display:none">跳 过</button>
+      <button id="btnSus" class="btn-gray" onclick="btnSusClick()" style="display:none">悬 待</button>
+    </div>
+
+    <div class="notice">明牌谋算 ｜ 攻め亮牌·出剑暗打·残心翻盘 ｜ 可悬待守势 ｜ 连胜滚气势</div>
+
+    <div class="intro" id="intro">
+      <div class="introBox">
+        <div class="logo">剑 道 三 本</div>
+        <div class="logoSub">水墨对决 · 先取二本胜</div>
+        <div class="introBody" id="introBody">
+          <p>· <b>对峙</b>：开局抽牌，双方手牌互见，互相谋算。</p>
+          <p>· <b>攻め</b>：各亮1张明牌，气势定先手。</p>
+          <p>· <b>出剑</b>：暗打1张真本，克制度+点数+先手定一本。</p>
+          <p>· <b>残心</b>：平手可补本、得本可卸对方一手、被得本可追回。</p>
+          <p>· <b>悬待</b>：对峙可选守势，保存手牌以守代攻，守成可夺对手一手。</p>
+          <p>· <b>牌类</b>：常规打·仕掛技·応じ技·心法，心法于残心有大用。</p>
+          <p>· 连胜滚雪球，被追回就崩盘，先取二本者胜。</p>
+        </div>
+        <div class="modeSel">
+          <div class="modeTitle">比 赛 模 式</div>
+          <div class="modeOpts">
+            <label class="modeOpt on" onclick="setMode('kihon',this)">单场稽古<small>三本胜负 · 练手感</small></label>
+            <label class="modeOpt" onclick="setMode('singles',this)">个人赛<small>选拔→16强→8强→半决→决</small></label>
+            <label class="modeOpt" onclick="setMode('team',this)">团体赛<small>五阵对垒 · 先取三胜</small></label>
+          </div>
+        </div>
+        <div class="btnRow">
+          <button class="btn-dark" onclick="enterGame()">开 始 稽 古</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="finale hidden" id="finale">
+      <div class="big" id="finaleText">你赢了</div>
+      <button onclick="newGame()">再来一局</button>
+    </div>
+
+    <div class="podium champ hidden" id="podium">
+      <div class="medal" id="poMedal">🥇</div>
+      <div class="pTitle" id="poTitle">冠 军</div>
+      <div class="pSub" id="poSub">全胜登顶 · 实至名归</div>
+      <div class="pLine" id="poLine"></div>
+      <button onclick="newGame()">再 战 一 次</button>
+    </div>
+
+    <div class="help hidden" id="help">
+      <div class="helpBox">
+        <button class="helpClose" onclick="hideHelp()">×</button>
+        <div class="helpHead">剑道三本 · 玩法与相克</div>
+        <div class="helpBody">
+          <h4>四阶流程</h4>
+          <p><b>对峙</b>：开局抽牌，双方手牌互见，谋定后动。</p>
+          <p><b>攻め</b>：各亮1张明牌，进攻之势定先手。</p>
+          <p><b>出剑</b>：暗打1张真本，凭相克、点数、先手争一本。</p>
+          <p><b>残心</b>：追加博弈——平手可补本、得本可卸对方牌、被得本可追回。</p>
+          <h4>悬待 · 守势</h4>
+          <p><b>对峙时</b>可选「悬待」：放弃本回合进攻，保存全部手牌、以守代攻。</p>
+          <p>对手照常攻来，你自动以最优手牌应守；守得住则手牌分毫未损（<b>手牌少于对方</b>时还能夺对手一手），守不住才失一本。</p>
+          <h4>牌面类型</h4>
+          <p><b>常 · 常规打</b>（面/手/胴/突）：正面进攻，比「攻」点数。</p>
+          <p><b>仕 · 仕掛技</b>（出端/连续/影击）：主动技，攻击<b>+1</b>，出端·影击自带先手。</p>
+          <p><b>応 · 応じ技</b>（拨/返/擦/打落）：被动技，命中克制目标即胜；无克制则被对方命中。</p>
+          <p><b>心 · 心法</b>（不动心/残心/悬待）：不正面相碰（判平手），威力全在残心。</p>
+          <h4>相克属性（応じ技）</h4>
+          <table class="counterTable">
+            <tr><th>応じ 技</th><th>克 制</th></tr>
+            <tr><td>拨击</td><td>面打</td></tr>
+            <tr><td>返击</td><td>小手打 · 突</td></tr>
+            <tr><td>擦击</td><td>胴打 · 连续技</td></tr>
+            <tr><td>打落</td><td>面打 · 突 · 出端技 · 影击</td></tr>
+          </table>
+          <h4>残心心法</h4>
+          <p><b>残心</b>牌：残心对判时<b>+2</b>优势。心法不正面相碰，专在残心发力。</p>
+          <h4>其他</h4>
+          <p>连胜滚气势（连本攻+1），被追回即崩盘。心法「不动心」可镇牌、「悬待」蓄势。</p>
+          <p><b>夺一手</b>：当你手牌少于对方时，得本或守势成功，可夺对方牌堆一手，给劣势翻盘留口气。</p>
+        </div>
+        <div class="helpFoot"><button class="btn-dark" onclick="hideHelp()">我 明 白 了</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CARDS = {
+  '面打':   {type:'uchi',  em:'面', pt:3, cls:'常'},
+  '小手打': {type:'uchi',  em:'手', pt:2, cls:'常'},
+  '胴打':   {type:'uchi',  em:'胴', pt:2, cls:'常'},
+  '突':     {type:'uchi',  em:'突', pt:3, cls:'常'},
+  '出端技': {type:'shiki', em:'出', pt:3, prio:true, cls:'仕'},
+  '连续技': {type:'shiki', em:'连', pt:2, cls:'仕'},
+  '影击':   {type:'shiki', em:'影', pt:3, prio:true, cls:'仕'},
+  '拨击':   {type:'oji', em:'拨', pt:0, counter:['面打'], cls:'応'},
+  '返击':   {type:'oji', em:'返', pt:0, counter:['小手打','突'], cls:'応'},
+  '擦击':   {type:'oji', em:'擦', pt:0, counter:['胴打','连续技'], cls:'応'},
+  '打落':   {type:'oji', em:'落', pt:0, counter:['面打','突','出端技','影击'], cls:'応'},
+  '不动心': {type:'kokoro', em:'心', pt:0, special:'seal', cls:'心'},
+  '残心':   {type:'kokoro', em:'残', pt:1, special:'zanshin', cls:'心'},
+  '悬待':   {type:'kokoro', em:'悬', pt:1, special:'kentai', cls:'心'},
+};
+Object.keys(CARDS).forEach(k=>CARDS[k].name=k);
+const TYPE_LABEL = {uchi:'常', shiki:'仕', oji:'応', kokoro:'心'};
+const DECK = ['面打','面打','面打','小手打','小手打','胴打','胴打','突','突',
+              '出端技','连续技','影击','拨击','返击','擦击','打落','不动心','残心','悬待'];
+const BUF_POOL = [
+  {name:'破军·攻', txt:'你 攻+1',     apply:b=>{b.atk=1;}},
+  {name:'玄武·御', txt:'你 守+1',     apply:b=>{b.def=1;}},
+  {name:'天罡·压', txt:'对方 攻-1',   apply:b=>{b.aiAtk=1;}},
+  {name:'疾风·势', txt:'你 多抽 1 牌', apply:b=>{b.draw=1;}},
+  {name:'心镜·明', txt:'你 残心+1',   apply:b=>{b.zin=1;}},
+];
+let youDeck=[], aiDeck=[], youHand=[], aiHand=[];
+let youScore=0, aiScore=0, streak=0, bestStreak=0;
+let MAXHAND=6, START=4;
+const TEAM_POS=['先锋','次锋','中坚','副将','大将'];
+const OPP_NAMES=[
+    '黄太郎','岩越正','臼井久雄','大江功','大岛功',
+    '大谷一雄','小笠原三郎','小川忠太郎','小川政之','小城满睦',
+    '奥川金十郎','奥山麟之助','乙藤春雄','小那敏','小野十生',
+    '鹿岛清孝','加德太平','神尾宗敬','纸本荣一','川上德藏',
+    '川口太郎','川岛满雄','川村因次郎','木村笃太郎','岸川辰次',
+    '北见庸藏','空闲源次','楠见义治','黑住龙四郎','河野善雄',
+    '小岛龟太郎','小岛主','小林领造','齐藤正利','崎本武志',
+    '作道圭二','佐佐木季邦','世森顺造','定久寿元','佐藤卯吉',
+    '佐藤寒山','佐藤金作','佐藤贞雄','佐藤毅','佐藤忠三',
+    '佐藤贡','柴恒正弘','清水义男','营原惠三郎','杉江寭',
+    '铃木几雄','铃木恒雄','园田直','鹰尾敏文','高岛永吉',
+    '高桥要','高桥秀三','馆野觉治','玉利嘉章','千叶敏雄',
+    '津岐兼敬','土田博吉','坪内八郎','时政铁之助','中尾严',
+    '中仓清','永峰晃','额田长','野田孝','野村高次',
+    '长谷川寿','长谷川平记','广光秀国','船田中','古濑乘',
+    '逸见和夫','堀口清','本田弘敏','本间七郎','松川久仁男',
+    '松野义庆','松本敏夫','三轮清','森井定胜','森田文十郎',
+    '安田政次郎','矢内正一','矢野一郎','山中义贞','汤野正惠',
+    '吉武六郎','芳村一郎','李家孝','和田晋'
+];
+let oppName='';
+const SINGLES_ROUNDS=['选拔赛','16强','8强','半决赛','决赛'];
+let step=0, semeSel=null, bladeSel=null, zanshinSel=null, previewSel=null;
+let aiSemeIdx=null, aiBladeIdx=null, aiZanshinIdx=null;
+let busy=false, mainResult=null;
+let BUF={atk:0,def:0,aiAtk:0,draw:0,zin:0}, BUFName='无';
+let mode='kihon', matchIdx=0, teamYou=0, teamAi=0, sRound=0;
+let started=false;
+
+const $=id=>document.getElementById(id);
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function makeDeck(){ return shuffle([...DECK]); }
+function draw(hand, deck, n){ for(let i=0;i<n && deck.length>0 && hand.length<MAXHAND;i++) hand.push(deck.pop()); }
+function isAtk(c){ return c.type==='uchi'||c.type==='shiki'; }
+function marksText(n){ return n>=2?'●●●':n===1?'●●○':'○○○'; }
+function arenaMid(){ const r=$('arena').getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+function myPileRect(){ const cr=$('cards').getBoundingClientRect(); return {left:cr.left+cr.width/2-22, top:cr.top-16, width:44, height:56}; }
+
+function flyBetween(srcRect, dstRect, emoji, label){
+  return new Promise(res=>{
+    const f=document.createElement('div'); f.className='flycard'; f.style.position='fixed'; f.style.zIndex='12';
+    f.style.display='flex'; f.style.alignItems='center'; f.style.justifyContent='center';
+    f.style.background='#fdfaf1'; f.style.border='1px solid #b09a66'; f.style.borderRadius='8px';
+    f.style.boxShadow='0 4px 14px rgba(80,60,30,.25)'; f.style.pointerEvents='none'; f.style.fontFamily='inherit';
+    f.innerHTML='<span style="font-size:20px">'+emoji+'</span>'+(label?('<span style="font-size:8px;position:absolute;bottom:2px;left:0;right:0;text-align:center;color:#8a7654">'+label+'</span>'):'');
+    document.body.appendChild(f);
+    const w=srcRect.width||46, h=srcRect.height||58;
+    f.style.width=w+'px'; f.style.height=h+'px';
+    f.style.left=(srcRect.left+srcRect.width/2-w/2)+'px';
+    f.style.top=(srcRect.top+srcRect.height/2-h/2)+'px';
+    f.style.transition='all .4s cubic-bezier(.2,.8,.25,1)';
+    f.style.opacity='0'; f.style.transform='scale(.4)';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      f.style.opacity='1';
+      f.style.left=(dstRect.left+dstRect.width/2-w/2)+'px';
+      f.style.top=(dstRect.top+dstRect.height/2-h/2)+'px';
+      f.style.transform='scale(1) rotate(-4deg)';
+    }));
+    setTimeout(()=>{ f.style.opacity='0'; f.style.transform='scale(.6) rotate(6deg)'; },430);
+    setTimeout(()=>{ f.remove(); res(); },680);
+  });
+}
+function splashAt(x,y){
+  const sd=document.createElement('div'); sd.className='splash'; sd.style.position='fixed'; sd.style.zIndex='11';
+  sd.style.borderRadius='999px'; sd.style.border='2px solid rgba(156,43,34,.4)'; sd.style.width='90px'; sd.style.height='90px';
+  sd.style.background='radial-gradient(circle, rgba(156,43,34,.14), transparent 60%)';
+  sd.style.pointerEvents='none'; sd.style.animation='popIn .45s ease';
+  sd.style.left=(x-45)+'px'; sd.style.top=(y-45)+'px';
+  document.body.appendChild(sd); setTimeout(()=>sd.remove(),500);
+}
+function zonk(text, cls){
+  const m=arenaMid();
+  const z=document.createElement('div'); z.className='manga-word'+(cls==='lose'?' lose':'');
+  z.style.left=m.x+'px'; z.style.top=m.y+'px';
+  z.textContent=text; z.style.setProperty('--ang', (Math.random()*10-5)+'deg');
+  document.body.appendChild(z); setTimeout(()=>z.remove(),1000);
+}
+function speedlines(n){
+  const m=arenaMid();
+  for(let i=0;i<n;i++){
+    const s=document.createElement('div'); s.className='speedline';
+    s.style.width=(80+Math.random()*80)+'px';
+    s.style.left=(m.x-60+Math.random()*40)+'px';
+    s.style.top=(m.y-30+i*28)+'px';
+    s.style.transformOrigin='left center';
+    document.body.appendChild(s); setTimeout(()=>s.remove(),600);
+  }
+}
+function mangaHit(word, lose){
+  zonk(word, lose?'lose':'');
+  speedlines(3);
+  splashAt(arenaMid().x, arenaMid().y);
+}
+async function drawAnimate(n){
+  const cr=$('cards').getBoundingClientRect();
+  const pr=myPileRect();
+  for(let i=0;i<n;i++){
+    const dst={left:cr.left+cr.width/2-20+( (i%2)?26:-26 ), top:cr.top+2, width:44, height:54};
+    await flyBetween(pr, dst, '抽', '');
+    await delay(110);
+  }
+  await delay(150);
+}
+
+function renderMarks(){ $('youMarks').textContent=marksText(youScore); $('aiMarks').textContent=marksText(aiScore); }
+function renderStreak(){ $('streak').textContent = streak>1 ? ('连胜 ×'+streak) : ''; }
+function renderAiHand(){
+  const p=$('aiHandPanel'); p.innerHTML='';
+  aiHand.forEach(n=>{ const d=CARDS[n]; const m=document.createElement('div'); m.className='aiMini';
+    m.innerHTML='<span>'+d.em+'</span><small>'+TYPE_LABEL[d.type]+(d.pt?d.pt:'')+'</small>'; p.appendChild(m); });
+}
+function setStepActive(s){ for(let i=0;i<4;i++){ const el=$('st'+i); el.className='step'+(i===s?' on':(i<s?' done':'')); } }
+function phaseMsg(t){ const el=$('phase'); el.textContent=t; void el.offsetWidth; el.classList.add('flash'); }
+function renderSlots(){ [['mySeme','—'],['myBlade','・'],['aiSeme','？'],['aiBlade','・']].forEach(p=>{ const el=$(p[0]); el.className='slot blank'; el.innerHTML=p[1]; }); }
+function renderCards(){
+  const c=$('cards'); c.innerHTML='';
+  youHand.forEach((name,i)=>{
+    const d=CARDS[name];
+    const disp=!cardEnabled(i);
+    const div=document.createElement('div');
+    div.className='card '+d.type
+      +(i===previewSel?' sel-prev':'')
+      +(i===semeSel?' sel-seme':'')
+      +(i===bladeSel?' sel-blade':'')
+      +(i===zanshinSel?' sel-zanshin':'')
+      +(disp?' disabled':'');
+    div.__idx=i;
+    div.innerHTML='<span class="em">'+d.em+'</span><span class="nm">'+name+'</span>'
+      +'<span class="pt">'+(d.type==='uchi'||d.type==='shiki'?'攻 '+d.pt:d.type==='oji'?'应':d.type==='kokoro'&&d.special==='zanshin'?'残':'心')+'</span>'
+      +'<span class="cls">'+d.cls+'</span>';
+    if(!disp) div.onclick=()=>pick(i);
+    c.appendChild(div);
+  });
+}
+function cardEnabled(i){
+  if(step===1) return i!==bladeSel && i!==zanshinSel;
+  if(step===2) return i!==semeSel && i!==zanshinSel;
+  if(step===3) return i!==semeSel && i!==bladeSel;
+  return true;
+}
+function pick(i){
+  if(busy) return;
+  if(step===0){ previewSel=(previewSel===i?null:i); renderCards(); }
+  else if(step===1 && i!==bladeSel && i!==zanshinSel){ semeSel=(semeSel===i?null:i); renderCards(); }
+  else if(step===2 && i!==semeSel && i!==zanshinSel){ bladeSel=(bladeSel===i?null:i); renderCards(); }
+  else if(step===3 && i!==semeSel && i!==bladeSel){ zanshinSel=(zanshinSel===i?null:i); renderCards(); }
+}
+function btnShow(main, skip, sus){ $('btnMain').style.display=main?'':'none'; $('btnSkip').style.display=skip?'':'none'; $('btnSus').style.display=(sus===true)?'':'none'; }
+function flashMsg(t){ const r=$('result'); r.textContent=t; r.className='result tie'; }
+
+function judge(myC, aiC, mySemeAtk, aiSemeAtk){
+  if(myC.type==='kokoro' && aiC.type==='kokoro') return 'tie';
+  if(myC.type==='kokoro' || aiC.type==='kokoro') return 'tie';
+  const mA=isAtk(myC), aA=isAtk(aiC);
+  if(mA && aA){
+    let mp=myC.pt + BUF.atk, ap=aiC.pt - BUF.aiAtk;
+    if(myC.type==='shiki') mp+=1;
+    if(aiC.type==='shiki') ap+=1;
+    if(mp>ap) return 'my';
+    if(ap>mp) return 'ai';
+    const myPrio=(myC.prio?1:0)+(mySemeAtk?1:0);
+    const aiPrio=(aiC.prio?1:0)+(aiSemeAtk?1:0);
+    if(myPrio>aiPrio) return 'my';
+    if(aiPrio>myPrio) return 'ai';
+    return 'tie';
+  }
+  if(mA && !aA){
+    if(aiC.type==='oji' && aiC.counter.includes(myC.name)) return 'ai';
+    return 'my';
+  }
+  if(!mA && aA){
+    if(myC.type==='oji' && myC.counter.includes(aiC.name)) return 'my';
+    return 'ai';
+  }
+  return 'tie';
+}
+
+function btnMainClick(){
+  if(busy) return;
+  if(step===0) startRound();
+  else if(step===1){ if(semeSel==null){ flashMsg('先选一张「攻め」牌'); return; } doSeme(); }
+  else if(step===2){ if(bladeSel==null){ flashMsg('暗选一张「出剑」真打'); return; } resolve(); }
+  else if(step===3){ if(zanshinSel!=null) doZanshin(); else nextRound(); }
+}
+function btnSkipClick(){
+  if(busy) return;
+  if(step===3){
+    if(zanshinSel==null){ nextRound(); }
+    else { flashMsg('已选残心牌：点「压残心」提交，或再点该牌取消后跳过'); }
+  }
+}
+
+function btnSusClick(){ if(!busy) doSus(); }
+function susBlock(aiBladeName){
+  const oji=youHand.map((n,i)=>i).filter(i=>CARDS[youHand[i]].type==='oji' && CARDS[youHand[i]].counter && CARDS[youHand[i]].counter.includes(aiBladeName));
+  if(oji.length) return oji[0];
+  const koko=youHand.map((n,i)=>i).filter(i=>CARDS[youHand[i]].type==='kokoro');
+  if(koko.length) return koko[0];
+  let best=0,bestP=-1;
+  youHand.forEach((n,i)=>{ if(CARDS[n].pt>bestP){bestP=CARDS[n].pt;best=i;} });
+  return best;
+}
+async function doSus(){
+  if(busy) return;
+  busy=true; btnShow(false,false,false);
+  const aiSIdx=aiSemePick(); aiSemeIdx=aiSIdx;
+  const aiBIdx=aiBladePick(); aiBladeIdx=aiBIdx;
+  const aiSemeName=aiHand[aiSIdx], aiBladeName=aiHand[aiBIdx];
+  renderSlots(); renderCards();
+  phaseMsg('悬待守势 · 保存手牌，以静制动');
+  $('result').className='result'; $('result').innerHTML='<small>对手攻来 · 且看你守不守得住</small>';
+  await flyBetween(aiCardRect(), $('aiSeme').getBoundingClientRect(), CARDS[aiSemeName].em, aiSemeName);
+  revealSlot($('aiSeme'), CARDS[aiSemeName]);
+  await delay(320);
+  await flyBetween(aiCardRect(), $('aiBlade').getBoundingClientRect(), CARDS[aiBladeName].em, aiBladeName);
+  revealSlot($('aiBlade'), CARDS[aiBladeName]);
+  const blockIdx=susBlock(aiBladeName);
+  const blockName=youHand[blockIdx];
+  const r=judge(CARDS[blockName], CARDS[aiBladeName], false, false);
+  const m=arenaMid();
+  const srcMy=[...document.querySelectorAll('.card')].find(e=>e.__idx===blockIdx);
+  const startRect=srcMy?srcMy.getBoundingClientRect():myPileRect();
+  if(srcMy) srcMy.classList.add('chosen');
+  await flyBetween(startRect, {left:m.x-28, top:m.y-24, width:56, height:48}, CARDS[blockName].em, blockName);
+  await delay(320);
+  let txt;
+  if(r==='ai'){
+    aiScore++; streak=0; mangaHit('唰！', true);
+    txt='悬待落空 · 被对手拿下'; $('result').className='result lose';
+  } else {
+    const stolen=youHand.length<aiHand.length && aiDeck.length>0;
+    if(stolen) draw(youHand, aiDeck, 1);
+    mangaHit(stolen?'铛！':'哐！');
+    txt='守势得手 · 手牌分毫未损' + (stolen?'，还夺对手一手！':'');
+    $('result').className='result win';
+  }
+  renderMarks(); renderStreak(); renderAiHand();
+  $('result').innerHTML=txt;
+  renderCards();
+  await delay(900);
+  busy=false;
+  nextRound();
+}
+async function enterDushu(first){
+  const bp=BUF_POOL[Math.floor(Math.random()*BUF_POOL.length)];
+  BUF={atk:0,def:0,aiAtk:0,draw:0,zin:0}; bp.apply(BUF);
+  if(streak>0) BUF.atk+=streak;
+  BUFName=bp.name;
+  const addYou = first ? START : 2+(BUF.draw||0);
+  const addAi  = first ? START : 2;
+  if(youDeck.length < addYou) youDeck=makeDeck();
+  if(aiDeck.length < addAi) aiDeck=makeDeck();
+  const before=youHand.length;
+  draw(youHand,youDeck,addYou); draw(aiHand,aiDeck,addAi);
+  step=0; semeSel=bladeSel=zanshinSel=null; previewSel=null; mainResult=null; busy=false;
+  setStepActive(0);
+  phaseMsg(first?'对峙 · 双方明牌在手':'对峙 · 补牌 +'+(addYou>2?addYou:2));
+  $('bufBar').textContent='剑意 · '+bp.name+'「'+bp.txt+'」'+(streak>1?(' 连胜 ×'+streak):'');
+  $('handTitle').textContent='你的手牌 · 看牌谋算';
+  renderSlots(); renderMarks(); renderStreak(); renderAiHand(); updateModeBar(); updateTitle();
+  if(!first) await drawAnimate(addYou);
+  const res=$('result'); res.className='result';
+  res.innerHTML='<small>'+(first?'双方手牌互见，谋定后动 · 点击「出阵」':'双方'+addYou+'张入手 · 点击「出阵」')+'</small>';
+  btnShow(true,false,true); $('btnMain').textContent='出 阵';
+  renderCards();
+}
+
+function enterGame(){ started=true; $('intro').classList.add('hidden'); enterDushu(true); }
+
+function newGame(){
+  started=false; matchIdx=0; teamYou=0; teamAi=0;
+  newOpp();
+  youDeck=makeDeck(); aiDeck=makeDeck();
+  youHand=[]; aiHand=[];
+  youScore=0; aiScore=0; streak=0; bestStreak=0; BUFName='无';
+  $('finale').classList.add('hidden');
+  setStepActive(0);
+  renderMarks(); renderStreak(); renderSlots(); renderAiHand();
+  updateModeBar(); updateTitle();
+  $('phase').textContent='对峙 · 看牌谋算';
+  $('bufBar').textContent='';
+  $('result').className='result'; $('result').innerHTML='<small>准备开始稽古…</small>';
+  $('btnMain').style.display='none'; $('btnSkip').style.display='none';
+  $('cards').innerHTML='';
+  $('intro').classList.remove('hidden');
+}
+
+function startRound(){
+  step=1; semeSel=bladeSel=zanshinSel=null; previewSel=null; mainResult=null;
+  setStepActive(1);
+  phaseMsg('攻め · 亮一张「明牌」给对方看');
+  $('bufBar').textContent='剑意 · '+BUFName+(streak>1?(' 连胜 ×'+streak):'');
+  $('handTitle').textContent='选「攻め」明牌（双方可见）';
+  $('result').innerHTML='<small>攻め亮牌，气势定先手</small>'; $('result').className='result';
+  btnShow(true,false); $('btnMain').textContent='亮 牌';
+  renderSlots(); renderCards();
+}
+
+async function doSeme(){
+  busy=true; btnShow(false,false);
+  const mySemeName=youHand[semeSel];
+  const ai=aiSemePick(); aiSemeIdx=ai;
+  const aiSemeName=aiHand[ai];
+  const srcMy=[...document.querySelectorAll('.card')].find(e=>e.__idx===semeSel);
+  const startRect=srcMy?srcMy.getBoundingClientRect():myPileRect();
+  srcMy && srcMy.classList.add('chosen');
+  renderSlots(); renderCards();
+  phaseMsg('攻め揭开 · 看对方气势');
+  await Promise.all([
+    flyBetween(startRect, $('mySeme').getBoundingClientRect(), CARDS[mySemeName].em, mySemeName),
+    flyBetween(aiCardRect(), $('aiSeme').getBoundingClientRect(), CARDS[aiSemeName].em, aiSemeName)
+  ]);
+  revealSlot($('mySeme'), CARDS[mySemeName]);
+  revealSlot($('aiSeme'), CARDS[aiSemeName]);
+  step=2; bladeSel=null; setStepActive(2);
+  phaseMsg('出剑 · 暗选一张「真打」');
+  $('handTitle').textContent='暗选「真打」（不能与攻め同一张）';
+  $('result').innerHTML='<small>真打暗出，来真的</small>'; $('result').className='result';
+  btnShow(true,false); $('btnMain').textContent='出 剑';
+  renderCards(); busy=false;
+}
+function aiCardRect(){ const p=$('aiHandPanel'); const r=p.getBoundingClientRect(); return {left:r.left+r.width/2-66, top:r.top+2, width:52, height:40}; }
+function revealSlot(slotEl, card){
+  slotEl.className='slot light pop';
+  slotEl.innerHTML='<span class="tt"><span class="em">'+card.em+'</span><small>'+TYPE_LABEL[card.type]+(card.pt?('·'+card.pt):'')+'</small></span>';
+}
+
+async function resolve(){
+  busy=true; btnShow(false,false);
+  const myBladeName=youHand[bladeSel];
+  const ai=aiBladePick(); aiBladeIdx=ai;
+  const aiBladeName=aiHand[ai];
+  const mySemeName=youHand[semeSel], aiSemeName=aiHand[aiSemeIdx];
+  const srcMy=[...document.querySelectorAll('.card')].find(e=>e.__idx===bladeSel);
+  const startRect=srcMy?srcMy.getBoundingClientRect():myPileRect();
+  srcMy && srcMy.classList.add('chosen');
+  renderSlots(); renderCards();
+  phaseMsg('出剑 · 真打相撞');
+  $('result').innerHTML='<small>··· 剑气交汇 ···</small>'; $('result').className='result';
+  await Promise.all([
+    flyBetween(startRect, $('myBlade').getBoundingClientRect(), CARDS[myBladeName].em, myBladeName),
+    flyBetween(aiCardRect(), $('aiBlade').getBoundingClientRect(), CARDS[aiBladeName].em, aiBladeName)
+  ]);
+  revealSlot($('myBlade'), CARDS[myBladeName]);
+  revealSlot($('aiBlade'), CARDS[aiBladeName]);
+  renderAiHand();
+  const mySemeAtk=isAtk(CARDS[mySemeName]), aiSemeAtk=isAtk(CARDS[aiSemeName]);
+  const r=judge(CARDS[myBladeName], CARDS[aiBladeName], mySemeAtk, aiSemeAtk);
+  mainResult=r;
+  await delay(150);
+  if(r==='my'){
+    youScore++; streak++; if(streak>bestStreak)bestStreak=streak;
+    const stolen=youHand.length<aiHand.length && aiDeck.length>0;
+    if(stolen) draw(youHand, aiDeck, 1);
+    mangaHit('铛！');
+    $('result').className='result win';
+    $('result').innerHTML='本 归 你 · 一击得手'+(stolen?'<br><small>夺对手一手</small>':'');
+    setTimeout(()=>zonk(streak>1?('一本 ×'+streak):'一本'),350);
+  } else if(r==='ai'){
+    aiScore++; streak=0;
+    mangaHit('唰！', true);
+    $('result').className='result lose'; $('result').innerHTML='本 被 对 手 拿 下';
+    setTimeout(()=>zonk('一本 · 对手', true),350);
+  } else {
+    mangaHit('哐！');
+    $('result').className='result tie'; $('result').innerHTML='双 剑 相错 · 落空';
+  }
+  renderMarks(); renderStreak();
+  await delay(750);
+  step=3; zanshinSel=null; previewSel=null; setStepActive(3);
+  phaseMsg('残心 · 是否压一张「残心牌」？');
+  $('handTitle').textContent='选残心牌（可跳过）';
+  btnShow(true,true); $('btnMain').textContent='压 残 心';
+  renderCards(); busy=false;
+}
+
+async function doZanshin(){
+  busy=true; btnShow(false,false);
+  const myZS=youHand[zanshinSel];
+  const ai=aiZanshinPick(); aiZanshinIdx=ai;
+  const aiZS=aiZanshinIdx!=null ? aiHand[aiZanshinIdx] : null;
+  const srcMy=[...document.querySelectorAll('.card')].find(e=>e.__idx===zanshinSel);
+  const startRect=srcMy?srcMy.getBoundingClientRect():myPileRect();
+  srcMy && srcMy.classList.add('chosen');
+  renderSlots(); renderCards();
+  phaseMsg('残心 · 最后一合');
+  const m=arenaMid();
+  await flyBetween(startRect, {left:m.x-28, top:m.y-24, width:56, height:48}, CARDS[myZS].em, myZS);
+  let myWin;
+  if(aiZanshinIdx==null){ myWin=true; }
+  else {
+    let mp=CARDS[myZS].pt + (CARDS[myZS].special==='zanshin'?2:0) + BUF.zin;
+    let ap=CARDS[aiZS].pt + (CARDS[aiZS].special==='zanshin'?2:0);
+    if(mp>ap) myWin=true; else if(ap>mp) myWin=false; else myWin='tie';
+  }
+  $('result').className='result'; $('result').innerHTML='<small>…</small>';
+  let txt;
+  if(mainResult==='my'){
+    if(myWin===true){ txt='残心压胜 · 得本照算，卸对方一手'; consumeAi(1); }
+    else if(myWin===false){ youScore--; if(youScore<0)youScore=0; txt='被对手残心追回 · 得本无效'; }
+    else { txt='残心相持 · 得本保留'; }
+  } else if(mainResult==='ai'){
+    if(myWin===true){ aiScore--; if(aiScore<0)aiScore=0; txt='残心追回 · 对手得本无效！'; mangaHit('铛！'); }
+    else if(myWin===false){ txt='对方残心压制 · 得本照算，卸你一手'; consumeYou(1); }
+    else { txt='对方得本照算 · 残心相持'; }
+  } else {
+    if(myWin===true){ youScore++; streak=1; txt='残心补本 · 你抢先拿下一本！'; mangaHit('残心斩！'); }
+    else if(myWin===false){ aiScore++; streak=0; txt='对手残心补本 · 抢先拿下'; }
+    else { txt='双方残心虚晃 · 仍无得本'; }
+  }
+  renderMarks(); renderStreak(); renderAiHand();
+  $('result').innerHTML=txt+'<br><small>结算本本…</small>';
+  $('result').className = txt.indexOf('无效')>=0||txt.indexOf('抢先拿下一本')>=0?'result win'
+    : txt.indexOf('对手')>=0?'result lose'
+    : mainResult==='my'?'result win': mainResult==='ai'?'result lose':'result tie';
+  await delay(750);
+  nextRound();
+}
+
+function nextRound(){
+  const used=[semeSel, bladeSel];
+  if(zanshinSel!=null) used.push(zanshinSel);
+  used.filter(v=>typeof v==='number').sort((a,b)=>b-a).forEach(i=>youHand.splice(i,1));
+  let aiUsed=[aiSemeIdx, aiBladeIdx];
+  if(aiZanshinIdx!=null) aiUsed.push(aiZanshinIdx);
+  aiUsed=aiUsed.filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>b-a);
+  aiUsed.forEach(i=>aiHand.splice(i,1));
+  const myWon=youScore>=2, aiWon=aiScore>=2;
+  if(!myWon && !aiWon){ enterDushu(false); return; }
+  // ---- 一场三本胜负结束 ----
+  if(mode==='team'){
+    if(myWon) teamYou++;
+    if(aiWon) teamAi++;
+    renderMarks(); updateModeBar();
+    matchIdx++;
+    const myTeamWin=teamYou>=3, aiTeamWin=teamAi>=3;
+    const over=myTeamWin||aiTeamWin||matchIdx>=5;
+    if(over){
+      const win=myTeamWin||(matchIdx>=5&&teamYou>teamAi);
+      endGame(win ? ('团体 · 你 胜 '+teamYou+' : '+teamAi) : ('团体 · 对 手 胜 '+teamAi+' : '+teamYou));
+      return;
+    }
+    // 换位上场
+    youScore=0; aiScore=0; streak=0;
+    BUF={atk:0,def:0,aiAtk:0,draw:0,zin:0}; BUFName='无';
+    renderMarks(); renderStreak();
+    const posIdx=matchIdx;
+    updateTitle();
+    showMatchBanner(posIdx);
+    setTimeout(()=>{ youHand=[]; aiHand=[]; youDeck=makeDeck(); aiDeck=makeDeck(); newOpp(); enterDushu(true); },550);
+    return;
+  }
+  // ---- 个人赛 ----
+  // ---- 个人淘汰赛（晋级制）----
+  if(mode==='singles'){
+    if(myWon){
+      sRound++;
+      if(sRound>=5){ endFinal('champ'); return; }
+      updateTitle();
+      showProgressBanner(sRound, sRound>=4?'决战':'晋级');
+      setTimeout(()=>{ youHand=[]; aiHand=[]; youDeck=makeDeck(); aiDeck=makeDeck();
+        youScore=0; aiScore=0; streak=0; BUF={atk:0,def:0,aiAtk:0,draw:0,zin:0}; BUFName='无';
+        newOpp(); renderMarks(); renderStreak(); enterDushu(true); },550);
+      return;
+    }
+    if(sRound>=4) endFinal('silver');
+    else if(sRound>=3) endFinal('bronze');
+    else endFinal('out');
+    return;
+  }
+  // ---- 单场稽古 ----
+  if(myWon) endGame('你 胜'); else endGame('对 手 胜');
+}
+function consumeAi(n){ for(let i=0;i<n;i++){ if(aiHand.length>1) aiHand.shift(); } }
+function consumeYou(n){ for(let i=0;i<n;i++){ if(youHand.length>1) youHand.shift(); } }
+
+function aiSemePick(){
+  const atk=aiHand.map((n,i)=>i).filter(i=>isAtk(CARDS[aiHand[i]]));
+  const oth=aiHand.map((n,i)=>i).filter(i=>!isAtk(CARDS[aiHand[i]]));
+  if(atk.length && Math.random()<0.75) return atk[Math.floor(Math.random()*atk.length)];
+  if(oth.length) return oth[Math.floor(Math.random()*oth.length)];
+  return atk.length?atk[0]:0;
+}
+function aiBladePick(){
+  const mySemeName=semeSel==null?null:youHand[semeSel];
+  const mySemeC=mySemeName?CARDS[mySemeName]:null;
+  if(mySemeC && isAtk(mySemeC)){
+    const defs=aiHand.map((n,i)=>i).filter(i=>
+      CARDS[aiHand[i]].type==='oji' && CARDS[aiHand[i]].counter && CARDS[aiHand[i]].counter.includes(mySemeName));
+    if(defs.length && Math.random()<0.6) return defs[Math.floor(Math.random()*defs.length)];
+  }
+  const atks=aiHand.map((n,i)=>i).filter(i=>isAtk(CARDS[aiHand[i]]));
+  if(atks.length) return atks[Math.floor(Math.random()*atks.length)];
+  const rest=aiHand.map((n,i)=>i);
+  return rest.length?rest[Math.floor(Math.random()*rest.length)]:0;
+}
+function aiZanshinPick(){
+  if(Math.random()<0.5) return null;
+  const z=aiHand.map((n,i)=>i).filter(i=>CARDS[aiHand[i]].type==='kokoro');
+  if(z.length) return z[Math.floor(Math.random()*z.length)];
+  const any=aiHand.map((n,i)=>i);
+  return any.length?any[Math.floor(Math.random()*any.length)]:null;
+}
+function endGame(t){
+  $('finaleText').textContent=t;
+  $('btnMain').style.display='none'; $('btnSkip').style.display='none';
+  $('finale').classList.remove('hidden');
+}
+function newOpp(){
+  oppName=OPP_NAMES[Math.floor(Math.random()*OPP_NAMES.length)];
+  renderOppName();
+}
+function renderOppName(){
+  if($('aiName')) $('aiName').textContent=oppName;
+  if($('aiTag')) $('aiTag').textContent=oppName;
+}
+function setMode(m, el){
+  mode=m; matchIdx=0; teamYou=0; teamAi=0; sRound=0;
+  if(el){ document.querySelectorAll('.modeOpt').forEach(o=>o.classList.remove('on')); el.classList.add('on'); }
+  updateTitle();
+}
+function updateTitle(){
+  const h1=$('h1'), sub=$('sub');
+  if(mode==='kihon'){ h1.textContent='剑 道 · 稽 古'; sub.textContent='单场稽古 · 三本胜负'; }
+  else if(mode==='singles'){ h1.textContent='个 人 淘 汰 赛'; sub.textContent='个人赛 · '+SINGLES_ROUNDS[Math.min(sRound,4)]; }
+  else if(mode==='team'){ h1.textContent='团 体 对 垒'; sub.textContent='团体赛 · 第'+(Math.min(matchIdx,4)+1)+'场 '+TEAM_POS[Math.min(matchIdx,4)]; }
+}
+function updateModeBar(){
+  const b=$('modeBar');
+  if(mode==='team' && started){
+    b.classList.remove('hidden');
+    const i=Math.min(matchIdx,4);
+    b.textContent='团体赛 · 第'+(i+1)+'场 · '+TEAM_POS[i]+'之位 ｜ 团队 '+teamYou+' : '+teamAi;
+  } else b.classList.add('hidden');
+}
+function showProgressBanner(idx, prefix){
+  const m=document.createElement('div'); m.className='matchBanner';
+  m.innerHTML='<div class="mbPos">'+prefix+' '+SINGLES_ROUNDS[Math.min(idx,4)]+'</div><div class="mbSub">对手愈强 · 谨慎应战</div>';
+  document.body.appendChild(m);
+  setTimeout(()=>{ m.classList.add('out'); },850);
+  setTimeout(()=>m.remove(),1400);
+}
+function endFinal(rank){
+  $('podium').className='podium '+rank;
+  const map={
+    champ:['🥇','冠 军','全胜登顶 · 实至名归','一路过关斩将，摘得桂冠'],
+    silver:['🥈','亚 军','闯至决赛 · 惜败一合','距巅峰只差一线'],
+    bronze:['🥉','季 军','四强之列 · 虽败犹荣','半决赛一战止步三甲'],
+    out:['🎋','出 局','淘汰止步 · 来年再战','强手如林，再接再厉']
+  };
+  const v=map[rank]||map.out;
+  $('poMedal').textContent=v[0]; $('poTitle').textContent=v[1];
+  $('poSub').textContent=v[2]; $('poLine').textContent=v[3];
+  $('btnMain').style.display='none'; $('btnSkip').style.display='none';
+  $('podium').classList.remove('hidden');
+}
+function showMatchBanner(posIdx){
+  const m=document.createElement('div'); m.className='matchBanner';
+  m.innerHTML='<div class="mbPos">'+TEAM_POS[Math.min(posIdx,4)]+'</div><div class="mbSub">换人上场 · 对阵</div>';
+  document.body.appendChild(m);
+  setTimeout(()=>{ m.classList.add('out'); },850);
+  setTimeout(()=>m.remove(),1400);
+}
+function showHelp(){ $('help').classList.remove('hidden'); }
+function hideHelp(){ $('help').classList.add('hidden'); }
+newGame();
+</script>
+</body>
+</html>
